@@ -84,31 +84,27 @@ def download_feed() -> None:
 # FIX Problem 5: required columns check
 # ─────────────────────────────────────────────
 def load_feed() -> pd.DataFrame:
-    required = {"id", "title", "link"}
-    for sep in ("\t", ",", ";"):
-        try:
-            df = pd.read_csv(
-                FEED_FILE,
-                sep=sep,
-                dtype=str,
-                encoding="utf-8",
-                on_bad_lines="skip"
-            )
-            df.columns = df.columns.str.strip().str.lower()
-            log.info(f"🔍  Trying separator: {repr(sep)}")
-            log.info(f"🔍  Column count: {len(df.columns)}")
-            log.info(f"🔍  Columns found: {df.columns.tolist()[:20]}")
-            if required.issubset(set(df.columns)):
-                # FIX: blank id → use row index
-                df["id"] = df["id"].fillna("")
-                df["id"] = df["id"].astype(str).str.strip()
-                df["id"] = df["id"].replace("", pd.NA).fillna(df.index.astype(str))
-                df = df.drop_duplicates(subset=["id"])
-                log.info(f"📊  Feed loaded — {len(df):,} rows, sep={repr(sep)}")
-                return df
-        except Exception:
-            continue
-    raise ValueError("Could not parse feed — required columns (id, title, link) missing.")
+    df = pd.read_csv(
+        FEED_FILE,
+        sep="\t",
+        dtype=str,
+        encoding="utf-8",
+        on_bad_lines="skip"
+    )
+    df.columns = df.columns.str.strip().str.lower()
+    log.info(f"🔍  Columns found: {df.columns.tolist()}")
+
+    missing = {"id", "title", "link"} - set(df.columns)
+    if missing:
+        raise ValueError(f"Feed missing required columns: {missing}")
+
+    df["id"] = df["id"].fillna("").astype(str).str.strip()
+    mask = df["id"] == ""
+    df.loc[mask, "id"] = df.index[mask].astype(str)
+    df = df.drop_duplicates(subset=["id"])
+
+    log.info(f"📊  Feed loaded — {len(df):,} rows")
+    return df
 
 # ─────────────────────────────────────────────
 #  🧹  HELPERS
@@ -122,6 +118,24 @@ def h(text: str) -> str:
     """Escape HTML special characters for Telegram HTML mode."""
     return html_lib.escape(text, quote=True)
 
+def get_usd_to_inr() -> float:
+    """Live USD→INR rate from exchangerate-api (free, no key)."""
+    try:
+        r = requests.get(
+            "https://api.exchangerate-api.com/v4/latest/USD",
+            timeout=10
+        )
+        r.raise_for_status()
+        rate = float(r.json()["rates"]["INR"])
+        log.info(f"💱  Live rate: 1 USD = ₹{rate:.2f}")
+        return rate
+    except Exception as e:
+        log.warning(f"⚠️  Rate fetch failed ({e}) — using fallback ₹86")
+        return 86.0
+
+# Bot start হওয়ার সময় একবার rate নেওয়া হয়
+USD_TO_INR = get_usd_to_inr()
+
 def format_inr(raw: str) -> str:
     if raw == "N/A":
         return "N/A"
@@ -132,7 +146,7 @@ def format_inr(raw: str) -> str:
                .replace("$", "").replace("₹", "")
                .replace(",", "").strip()
         )
-        amount = float(cleaned)
+        amount = float(cleaned) * USD_TO_INR
         s = f"{amount:.0f}"
         if len(s) > 3:
             last3 = s[-3:]
