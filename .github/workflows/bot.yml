@@ -1,0 +1,43 @@
+name: Admitad Telegram Bot
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # প্রতি ৫ মিনিটে একবার (GitHub minimum)
+  workflow_dispatch:          # হাতে manually চালানোর জন্য
+
+jobs:
+  post:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pandas pyTelegramBotAPI requests
+
+      - name: Run bot
+        env:
+          BOT_TOKEN:  ${{ secrets.BOT_TOKEN }}
+          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+          FEED_URL:   ${{ secrets.FEED_URL }}
+        run: python bot.py
+
+      - name: Save posted.txt to repo
+        if: always()
+        shell: bash
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add posted.txt || true
+          git diff --cached --quiet || git commit -m "chore: update posted.txt [skip ci]"
+          git push || true
