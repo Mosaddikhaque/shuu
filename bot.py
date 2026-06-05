@@ -1,3 +1,4 @@
+
 import pandas as pd
 import telebot
 import requests
@@ -10,7 +11,6 @@ import html as html_lib
 # ─────────────────────────────────────────────
 #  🔧  CONFIGURATION
 # ─────────────────────────────────────────────
-
 BOT_TOKEN  = os.environ["BOT_TOKEN"]
 CHANNEL_ID = os.environ["CHANNEL_ID"]
 FEED_URL   = os.environ["FEED_URL"]
@@ -87,9 +87,17 @@ def load_feed() -> pd.DataFrame:
     required = {"id", "title", "link"}
     for sep in ("\t", ",", ";"):
         try:
-            df = pd.read_csv(FEED_FILE, sep=sep, dtype=str, on_bad_lines="skip")
+            df = pd.read_csv(
+                FEED_FILE,
+                sep=sep,
+                dtype=str,
+                encoding="utf-8",
+                on_bad_lines="skip"
+            )
             df.columns = df.columns.str.strip().str.lower()
-            # FIX Problem 5: proper required column check
+            log.info(f"🔍  Trying separator: {repr(sep)}")
+            log.info(f"🔍  Column count: {len(df.columns)}")
+            log.info(f"🔍  Columns found: {df.columns.tolist()[:20]}")
             if required.issubset(set(df.columns)):
                 # FIX: blank id → use row index
                 df["id"] = df["id"].fillna("")
