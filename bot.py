@@ -10,10 +10,10 @@ import html as html_lib
 # ─────────────────────────────────────────────
 #  🔧  CONFIGURATION
 # ─────────────────────────────────────────────
-BOT_TOKEN  = os.environ["8951063494:AAHTFRdm3n84O3lPAGg1lVZIACZZpsLwaiM"]
-CHANNEL_ID = os.environ["CHANNEL_ID"]
-FEED_URL   = os.environ["https://export.admitad.com/en/webmaster/websites/2948252/products/export_adv_products/?user=mosaddik_haque76762&code=zy9huf0356&template=78486&currency=INR&only_sale=true&feed_id=17677&last_import=2024.11.05.00.00"]
 
+BOT_TOKEN  = os.environ["BOT_TOKEN"]
+CHANNEL_ID = os.environ["CHANNEL_ID"]
+FEED_URL   = os.environ["FEED_URL"]
 
 POSTED_FILE = "posted.txt"
 FEED_FILE   = "feed.csv"
